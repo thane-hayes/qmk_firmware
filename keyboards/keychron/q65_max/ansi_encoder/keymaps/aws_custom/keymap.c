@@ -15,6 +15,7 @@
  */
 
 #include QMK_KEYBOARD_H
+#include "rgb_matrix_user.h"
 #include "keychron_common.h"
 
 enum custom_keycodes {
@@ -23,13 +24,8 @@ enum custom_keycodes {
     KC_DEBUG_LED,             // Debug LED cycling
 };
 
-// Modal states
-enum modal_state {
-    STATE_IDLE,
-    STATE_NVIM_MODE,
-    STATE_BROWSER_MODE,
-    STATE_MEDIA_MODE,
-};
+// Use RGB state system from rgb_matrix_user.h
+// States: RGB_STATE_IDLE, RGB_STATE_CMD_HELD, RGB_STATE_NVIM_MODE, RGB_STATE_BROWSER_MODE, RGB_STATE_MEDIA_MODE
 enum layers {
     MAC_BASE,
     WIN_BASE,
@@ -54,23 +50,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [MAC_FN1] = LAYOUT_ansi_73(
         RGB_TOG,     KC_GRV,  KC_BRID,  KC_BRIU,  KC_MCTRL,KC_LNPAD,RGB_VAD, RGB_VAI, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE,  KC_VOLD,  KC_VOLU,  _______,          _______,
-        _______,     _______, BT_HST1,  BT_HST2,  BT_HST3, P2P4G,  _______, _______, _______, _______, _______, _______,  _______,  _______,  _______,          _______,
+        _______,     _______, BT_HST1,  KC_AWS_WIN, BT_HST3, P2P4G,  _______, _______, _______, _______, _______, _______,  _______,  _______,  _______,          _______,
         _______,     RGB_TOG, RGB_MOD,  RGB_VAI,  RGB_HUI, RGB_SAI, RGB_SPI, _______, _______, _______, _______, _______,  _______,            _______,          _______,
-        _______,     _______,           RGB_RMOD, RGB_VAD, RGB_HUD, RGB_SAD, RGB_SPD, NK_TOGG, _______, _______, _______,  _______,            _______, _______, _______,
+        _______,     _______,           RGB_RMOD, RGB_VAD, RGB_HUD, RGB_SAD, RGB_SPD, NK_TOGG, KC_AWS_MAC, _______, _______,  _______,            _______, _______, _______,
         _______,     _______, _______,  _______,                             _______,                            _______,  _______,  _______,  _______, _______, _______),
 
     [WIN_FN1] = LAYOUT_ansi_73(
         RGB_TOG,     KC_GRV,  KC_BRID,  KC_BRIU,  KC_TASK, KC_FILE, RGB_VAD, RGB_VAI, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE,  KC_VOLD,  KC_VOLU,  _______,          _______,
-        _______,     _______, BT_HST1,  BT_HST2,  BT_HST3, P2P4G,  _______, _______, _______, _______, _______, _______,  _______,  _______,   _______,          _______,
+        _______,     _______, BT_HST1,  KC_AWS_WIN,  BT_HST3, P2P4G,  _______, _______, _______, _______, _______, _______,  _______,  _______,   _______,          _______,
         _______,     RGB_TOG, RGB_MOD,  RGB_VAI,  RGB_HUI, RGB_SAI, RGB_SPI, _______, _______, _______, _______, _______,  _______,            _______,          _______,
-        _______,     _______,           RGB_RMOD, RGB_VAD, RGB_HUD, RGB_SAD, RGB_SPD, NK_TOGG, _______, _______, _______,  _______,            _______, _______, _______,
+        _______,     _______,           RGB_RMOD, RGB_VAD, RGB_HUD, RGB_SAD, RGB_SPD, NK_TOGG, KC_AWS_MAC, _______, _______,  _______,            _______, _______, _______,
         _______,     _______, _______,  _______,                             _______,                            _______,  _______,  _______,  _______, _______, _______),
 
     [FN2] = LAYOUT_ansi_73(
         _______,    _______, _______,  _______,   _______, _______, _______, _______, _______, _______, _______, _______,  _______,  _______,  _______,          _______,
-        _______,    _______, _______,  KC_AWS_WIN,_______, _______, _______, _______, _______, _______, _______, _______,  _______,  _______,   _______,          _______,
+        _______,    _______, _______,  _______,   _______, _______, _______, _______, _______, _______, _______, _______,  _______,  _______,   _______,          _______,
         _______,    _______, _______,  _______,   KC_DEBUG_LED, _______, _______, _______, _______, _______, _______, _______,  _______,            _______,          _______,
-        _______,    _______,           _______,   _______, _______, _______, _______, _______, KC_AWS_MAC, _______, _______, _______,            _______, _______, _______,
+        _______,    _______,           _______,   _______, _______, _______, _______, _______, _______, _______, _______, _______,            _______, _______, _______,
         _______,    _______, _______,  _______,                              _______,                            _______,  _______,  _______,  _______, _______, _______)
 };
 
@@ -85,6 +81,12 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
 };
 #endif // ENCODER_MAP_ENABLE
 
+// EEPROM initialization - set defaults
+void eeconfig_init_user(void) {
+    // Default to Mac mode
+    eeconfig_update_user(1);  // 1 = Mac, 0 = Windows
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     // Keep Keychron's default processing
     if (!process_record_keychron_common(keycode, record)) {
@@ -94,12 +96,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     // AWS Custom overrides
     static bool prefix_held = false;
     static bool is_mac_mode = true;  // Default to Mac
-    static enum modal_state current_state = STATE_IDLE;
     static bool eeprom_loaded = false;
     
     // Load OS mode from EEPROM on first run
     if (!eeprom_loaded) {
-        uint8_t saved_mode = eeconfig_read_kb();
+        uint8_t saved_mode = eeconfig_read_user();
         is_mac_mode = (saved_mode == 1);
         eeprom_loaded = true;
     }
@@ -107,25 +108,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     // OS Mode Switching
     if (keycode == KC_AWS_MAC && record->event.pressed) {
         is_mac_mode = true;
-        eeconfig_update_kb(is_mac_mode ? 1 : 0);  // Save to EEPROM
+        eeconfig_update_user(is_mac_mode ? 1 : 0);  // Save to EEPROM
         // TODO: Use is_mac_mode for OS-specific shortcuts
         return false;
     }
     if (keycode == KC_AWS_WIN && record->event.pressed) {
         is_mac_mode = false;
-        eeconfig_update_kb(is_mac_mode ? 1 : 0);  // Save to EEPROM
+        eeconfig_update_user(is_mac_mode ? 1 : 0);  // Save to EEPROM
         // TODO: Use is_mac_mode for OS-specific shortcuts  
         return false;
     }
     
     // Debug LED cycling
     if (keycode == KC_DEBUG_LED && record->event.pressed) {
-        static uint8_t debug_index = 0;
-        // Cycle through LED indices for hardware verification
-        rgb_matrix_set_color(debug_index, RGB_WHITE);
-        wait_ms(500);
-        rgb_matrix_set_color(debug_index, RGB_OFF);
-        debug_index = (debug_index + 1) % RGB_MATRIX_LED_COUNT;
+        debug_led_cycle();
         return false;
     }
     
@@ -133,13 +129,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (keycode == KC_LCMMD) {
         if (record->event.pressed) {
             prefix_held = true;
-            // Set RGB to indicate prefix mode
-            rgb_matrix_sethsv_noeeprom(HSV_BLUE);
+            rgb_set_state(RGB_STATE_CMD_HELD);
         } else {
             prefix_held = false;
-            // Reset RGB based on current state
-            if (current_state == STATE_IDLE) {
-                rgb_matrix_sethsv_noeeprom(HSV_OFF);
+            if (rgb_get_state() == RGB_STATE_CMD_HELD) {
+                rgb_set_state(RGB_STATE_IDLE);
             }
         }
         return false; // Don't send Left Cmd to host
@@ -153,74 +147,118 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     // Prefix IS held - handle custom shortcuts
     if (record->event.pressed) {
         // Mode entry keys
-        if (current_state == STATE_IDLE) {
+        if (rgb_get_state() == RGB_STATE_IDLE) {
             switch (keycode) {
                 case KC_N: // Enter Nvim mode
-                    current_state = STATE_NVIM_MODE;
-                    rgb_matrix_sethsv_noeeprom(HSV_GREEN);
+                    rgb_set_state(RGB_STATE_NVIM_MODE);
                     return false;
                 case KC_B: // Enter Browser mode
-                    current_state = STATE_BROWSER_MODE;
-                    rgb_matrix_sethsv_noeeprom(HSV_ORANGE);
+                    rgb_set_state(RGB_STATE_BROWSER_MODE);
                     return false;
                 case KC_M: // Enter Media mode
-                    current_state = STATE_MEDIA_MODE;
-                    rgb_matrix_sethsv_noeeprom(HSV_PURPLE);
+                    rgb_set_state(RGB_STATE_MEDIA_MODE);
                     return false;
             }
         }
         
         // Handle modal shortcuts
-        if (current_state == STATE_NVIM_MODE) {
+        if (rgb_get_state() == RGB_STATE_NVIM_MODE) {
             switch (keycode) {
                 case KC_H: // Tmux pane left
-                    tap_code16(LCTL(KC_LBRC)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+[
                     wait_ms(50);
                     tap_code(KC_H);
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_J: // Tmux pane down
-                    tap_code16(LCTL(KC_LBRC)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+[
                     wait_ms(50);
                     tap_code(KC_J);
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_K: // Tmux pane up
-                    tap_code16(LCTL(KC_LBRC)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+[
                     wait_ms(50);
                     tap_code(KC_K);
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_L: // Tmux pane right
-                    tap_code16(LCTL(KC_LBRC)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+[
                     wait_ms(50);
                     tap_code(KC_L);
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_S: // Split horizontal
-                    tap_code16(LCTL(KC_LBRC)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+[
                     wait_ms(50);
                     tap_code16(LSFT(KC_QUOT)); // "
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_V: // Split vertical
-                    tap_code16(LCTL(KC_LBRC)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+B (tmux prefix)
                     wait_ms(50);
                     tap_code16(LSFT(KC_5)); // %
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_T: // New tmux window
+                    tap_code16(LCTL(KC_B));
+                    wait_ms(50);
+                    tap_code(KC_C);  // 'c' for create window
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_W: // Close tmux pane
+                    tap_code16(LCTL(KC_B));
+                    wait_ms(50);
+                    tap_code(KC_X);  // 'x' for close pane
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_Z: // Zoom tmux pane
+                    tap_code16(LCTL(KC_B));
+                    wait_ms(50);
+                    tap_code(KC_Z);  // 'z' for zoom
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_1: // Window 1
+                    tap_code16(LCTL(KC_B));
+                    wait_ms(50);
+                    tap_code(KC_1);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_2: // Window 2
+                    tap_code16(LCTL(KC_B));
+                    wait_ms(50);
+                    tap_code(KC_2);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_3: // Window 3
+                    tap_code16(LCTL(KC_B));
+                    wait_ms(50);
+                    tap_code(KC_3);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_4: // Window 4
+                    tap_code16(LCTL(KC_B));
+                    wait_ms(50);
+                    tap_code(KC_4);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_M: // Rotate panes
+                    tap_code16(LCTL(KC_B));
+                    wait_ms(50);
+                    tap_code16(LCTL(KC_O)); // Ctrl+O for rotate
+                    rgb_set_state(RGB_STATE_IDLE);
                     return false;
                 case KC_ESC: // Exit mode
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
             }
-        } else if (current_state == STATE_BROWSER_MODE) {
+        } else if (rgb_get_state() == RGB_STATE_BROWSER_MODE) {
             switch (keycode) {
                 case KC_H: // Browser back
                     if (is_mac_mode) {
@@ -228,8 +266,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     } else {
                         tap_code16(LALT(KC_LEFT)); // Windows: Alt+Left
                     }
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_L: // Browser forward
                     if (is_mac_mode) {
@@ -237,8 +275,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     } else {
                         tap_code16(LALT(KC_RIGHT)); // Windows: Alt+Right
                     }
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_R: // Hard reload
                     if (is_mac_mode) {
@@ -246,50 +284,76 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     } else {
                         tap_code16(LCTL(LSFT(KC_R))); // Windows: Ctrl+Shift+R
                     }
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_D: // Duplicate tab
+                    if (is_mac_mode) {
+                        tap_code16(LGUI(LSFT(KC_D)));
+                    } else {
+                        tap_code16(LCTL(LSFT(KC_D)));
+                    }
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_I: // Dev tools
+                    if (is_mac_mode) {
+                        tap_code16(LGUI(LALT(KC_I)));
+                    } else {
+                        tap_code16(LCTL(LSFT(KC_I)));
+                    }
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_P: // Private/Incognito window
+                    if (is_mac_mode) {
+                        tap_code16(LGUI(LSFT(KC_N)));
+                    } else {
+                        tap_code16(LCTL(LSFT(KC_N)));
+                    }
+                    rgb_set_state(RGB_STATE_IDLE);
                     return false;
                 case KC_ESC: // Exit mode
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
             }
-        } else if (current_state == STATE_MEDIA_MODE) {
+        } else if (rgb_get_state() == RGB_STATE_MEDIA_MODE) {
             switch (keycode) {
                 case KC_SPC: // Play/Pause
                     tap_code(KC_MPLY);
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_H: // Previous track
                     tap_code(KC_MPRV);
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_L: // Next track
                     tap_code(KC_MNXT);
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_J: // Volume down
                     tap_code(KC_VOLD);
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
                 case KC_K: // Volume up
                     tap_code(KC_VOLU);
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    return false;
+                case KC_M: // Mute
+                    tap_code(KC_MUTE);
+                    rgb_set_state(RGB_STATE_IDLE);
                     return false;
                 case KC_ESC: // Exit mode
-                    current_state = STATE_IDLE;
-                    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+                    rgb_set_state(RGB_STATE_IDLE);
+                    
                     return false;
             }
         }
         
         // Default shortcuts (when in idle state)
-        if (current_state == STATE_IDLE) {
+        if (rgb_get_state() == RGB_STATE_IDLE) {
             switch (keycode) {
                 case KC_H: // Left arrow
                     tap_code(KC_LEFT);
