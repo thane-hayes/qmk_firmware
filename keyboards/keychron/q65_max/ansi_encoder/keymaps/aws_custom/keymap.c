@@ -165,35 +165,35 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         if (rgb_get_state() == RGB_STATE_NVIM_MODE) {
             switch (keycode) {
                 case KC_H: // Tmux pane left
-                    tap_code16(LCTL(KC_B)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+B (tmux prefix)
                     wait_ms(50);
                     tap_code(KC_H);
                     rgb_set_state(RGB_STATE_IDLE);
                     
                     return false;
                 case KC_J: // Tmux pane down
-                    tap_code16(LCTL(KC_B)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+B (tmux prefix)
                     wait_ms(50);
                     tap_code(KC_J);
                     rgb_set_state(RGB_STATE_IDLE);
                     
                     return false;
                 case KC_K: // Tmux pane up
-                    tap_code16(LCTL(KC_B)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+B (tmux prefix)
                     wait_ms(50);
                     tap_code(KC_K);
                     rgb_set_state(RGB_STATE_IDLE);
                     
                     return false;
                 case KC_L: // Tmux pane right
-                    tap_code16(LCTL(KC_B)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+B (tmux prefix)
                     wait_ms(50);
                     tap_code(KC_L);
                     rgb_set_state(RGB_STATE_IDLE);
                     
                     return false;
                 case KC_S: // Split horizontal
-                    tap_code16(LCTL(KC_B)); // Ctrl+[
+                    tap_code16(LCTL(KC_B)); // Ctrl+B (tmux prefix)
                     wait_ms(50);
                     tap_code16(LSFT(KC_QUOT)); // "
                     rgb_set_state(RGB_STATE_IDLE);
@@ -250,7 +250,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 case KC_M: // Rotate panes
                     tap_code16(LCTL(KC_B));
                     wait_ms(50);
-                    tap_code16(LCTL(KC_O)); // Ctrl+O for rotate
+                    tap_code(KC_O); // o for rotate
                     rgb_set_state(RGB_STATE_IDLE);
                     return false;
                 case KC_ESC: // Exit mode
