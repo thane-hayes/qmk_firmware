@@ -11,19 +11,18 @@
 /* =============================================================================
  * LED INDEX DEFINITIONS
  * 
- * These are ESTIMATED based on typical Keychron layouts.
- * MUST be verified on physical hardware before production.
- * Use Fn+D to cycle through LEDs and record actual indices.
+ * Actual indices from Q65 Max ANSI encoder baseline code (ansi_encoder.c)
+ * Key Matrix to LED Index mapping verified from g_led_config
  * ============================================================================= */
 
-// Row 0 (Function row) - indices 0-15
+// Row 0 (Function row)
 #define LED_ESC     1
 #define LED_1       2
 #define LED_2       3
 #define LED_3       4
 #define LED_4       5
 
-// Row 1 (Number row) - indices ~16-30
+// Row 1 (Number row) 
 #define LED_Q       17
 #define LED_W       18
 #define LED_E       19
@@ -35,7 +34,7 @@
 #define LED_O       25
 #define LED_P       26
 
-// Row 2 (Home row) - indices ~31-44
+// Row 2 (Home row)
 #define LED_A       32
 #define LED_S       33
 #define LED_D       34
@@ -46,17 +45,19 @@
 #define LED_K       39
 #define LED_L       40
 
-// Row 3 (Bottom alpha row) - indices ~45-57
-#define LED_Z       47
-#define LED_X       48
-#define LED_C       49
-#define LED_V       50
-#define LED_B       51
-#define LED_N       52
-#define LED_M       53
+// Row 3 (Bottom alpha row)
+#define LED_Z       48
+#define LED_X       49
+#define LED_C       50
+#define LED_V       51
+#define LED_B       52
+#define LED_N       53
+#define LED_M       54
 
-// Row 4 (Space row) - indices ~58-72
-#define LED_SPC     63
+// Row 4 (Bottom row)
+#define LED_LCTL    61
+#define LED_LCMD    64  // Left Cmd (our prefix key)
+#define LED_SPC     65
 
 /* =============================================================================
  * COLOR DEFINITIONS (RGB values)
